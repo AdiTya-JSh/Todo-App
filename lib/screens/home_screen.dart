@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '/models/task.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,11 +10,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Task> tasks = [
-    Task(title: "Flutter todo list"),
-    Task(title: "Sample Task"),
-  ];
+  List<Task> get tasks => taskBox.values.toList();
   final TextEditingController controller = TextEditingController();
+  late Box<Task> taskBox;
+
+  @override
+  void initState(){
+    super.initState();
+
+    taskBox = Hive.box<Task>("tasks");
+  }
 
   @override
   void dispose(){
@@ -22,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void addTask(String title){
-    tasks.add(Task(title: title));
+    taskBox.add(Task(title: title));
   }
 
   @override
@@ -32,7 +38,33 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         title: const Text("Todo App"),
       ),
-      body: ListView.builder(
+      body: tasks.isEmpty? Center(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.note_alt_outlined,
+            size: 80,
+            color: Colors.grey,),
+
+            SizedBox(height: 16,),
+
+            Text(
+                "No Tasks Yet",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),),
+            
+            SizedBox(height: 8,),
+            
+            Text("Tap + to Add Tasks",
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),)
+          ],
+        ),
+      ) :
+      ListView.builder(
         itemCount: tasks.length,
       itemBuilder: (context,index){
           return Card(
@@ -42,6 +74,108 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             child: ListTile(
+              onLongPress: (){
+                showModalBottomSheet(context: context, builder: (context){
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tasks[index].title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Divider(),
+
+                      ListTile(
+                        leading: const Icon(Icons.edit),
+                        title: const Text("Edit"),
+                        onTap: (){
+                          Navigator.pop(context);
+                          final controller = TextEditingController(
+                            text: tasks[index].title,
+                          );
+                          showDialog(context: context, builder: (context){
+                            return AlertDialog(
+                              title: const Text("Edit Task"),
+                              content: TextField(
+                                controller: controller,
+                                autofocus: true,
+                              ),
+                              actions: [
+                                TextButton(onPressed: (){
+                                  Navigator.pop(context);
+                                }, child: const Text("Cancel")),
+                                
+                                TextButton(onPressed: (){
+                                  final title = controller.text.trim();
+
+                                  if(title.isEmpty)return;
+                                  setState(() {
+                                    taskBox.putAt(index,
+                                    Task(
+                                      title : title,
+                                      completed: tasks[index].completed,
+                                    ),);
+                                  });
+                                  Navigator.pop(context);
+                                }, child: const Text("Save"))
+                              ],
+                            );
+
+                            },
+                          );
+                        },
+                      ),
+
+                      ListTile(
+                        leading: const Icon(Icons.delete),
+                        title: const Text("Delete"),
+                        onTap: (){
+                          Navigator.pop(context);
+
+                          showDialog(context: context, builder: (context){
+                            return AlertDialog(
+                              title: const Text("Delete Task"),
+                              content: Text.rich(
+                                  TextSpan(text: 'Are you sure you want to delete ',
+
+                                  children: [
+                                    TextSpan(
+                                        text: '"${tasks[index].title}"',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+
+                                      )),
+
+                                    TextSpan(text:' ?'
+                                    ),]
+                                  ),),
+                              actions: [
+                                TextButton(onPressed: (){
+                                  Navigator.pop(context);
+                                }, child: const Text("Cancel")),
+
+                                TextButton(
+                                    style: TextButton.styleFrom(foregroundColor: Colors.red) ,
+                                    onPressed: (){
+                                  setState(() {
+                                    taskBox.deleteAt(index);
+                                  });
+                                  Navigator.pop(context);
+                                }, child: const Text("Delete"))
+                              ],);
+                          });
+                        },
+                      )
+                    ],
+                  ),);
+                },);
+              },
             leading: IconButton(onPressed: (){
               setState(() {
                 tasks[index].completed = !tasks[index].completed;
@@ -60,11 +194,6 @@ class _HomeScreenState extends State<HomeScreen> {
               fontWeight: tasks[index].completed? FontWeight.normal:FontWeight.bold,
             ),),
 
-            trailing: IconButton(onPressed: (){
-              setState(() {
-                tasks.removeAt(index);
-              });
-            }, icon: const Icon(Icons.delete)),
 
           ),
           );
