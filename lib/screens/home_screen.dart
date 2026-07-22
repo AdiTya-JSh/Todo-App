@@ -10,7 +10,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Task> get tasks => taskBox.values.toList();
   final TextEditingController controller = TextEditingController();
   late Box<Task> taskBox;
 
@@ -38,7 +37,12 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         title: const Text("Todo App"),
       ),
-      body: tasks.isEmpty? Center(
+      body: ValueListenableBuilder(
+        valueListenable: taskBox.listenable(),
+        builder: (context, box, child){
+          final tasks = box.values.toList();
+
+      return tasks.isEmpty? Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.note_alt_outlined,
@@ -115,13 +119,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   final title = controller.text.trim();
 
                                   if(title.isEmpty)return;
-                                  setState(() {
                                     taskBox.putAt(index,
                                     Task(
                                       title : title,
                                       completed: tasks[index].completed,
                                     ),);
-                                  });
                                   Navigator.pop(context);
                                 }, child: const Text("Save"))
                               ],
@@ -163,9 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 TextButton(
                                     style: TextButton.styleFrom(foregroundColor: Colors.red) ,
                                     onPressed: (){
-                                  setState(() {
                                     taskBox.deleteAt(index);
-                                  });
                                   Navigator.pop(context);
                                 }, child: const Text("Delete"))
                               ],);
@@ -177,9 +177,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 },);
               },
             leading: IconButton(onPressed: (){
-              setState(() {
-                tasks[index].completed = !tasks[index].completed;
-              });
+              taskBox.putAt(index, Task(
+                  title: tasks[index].title,
+                  completed: !tasks[index].completed,),
+              );
             }, icon: Icon(
                 tasks[index].completed?
                     Icons.check_box:
@@ -197,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           ),
           );
-      }),
+      });}),
         
         floatingActionButton: FloatingActionButton(
         onPressed: (){
@@ -220,9 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 TextButton(onPressed: (){
                   final title = controller.text.trim();
                   if(title.isEmpty) return;
-                  setState(() {
                     addTask(title);
-                  });
                   controller.clear();
                   Navigator.pop(context);
                 }, child: const Text("Add"),),
