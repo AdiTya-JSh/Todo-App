@@ -104,6 +104,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 completed: task.completed,
               ),);
             Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Task Updated"))
+            );
           }, child: const Text("Save"))
         ],
       );
@@ -139,8 +142,18 @@ class _HomeScreenState extends State<HomeScreen> {
           TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red) ,
               onPressed: (){
+                final deletedTask = task;
                 taskBox.deleteAt(index);
                 Navigator.pop(context);
+                final messenger = ScaffoldMessenger.of(context);
+                messenger.hideCurrentSnackBar();
+                messenger.showSnackBar(
+                    SnackBar(content: const Text("Task Deleted"),
+                    action: SnackBarAction(
+                        label: "UNDO", onPressed: (){
+                      taskBox.add(deletedTask);
+                    }),)
+                );
               }, child: const Text("Delete"))
         ],);
     });
@@ -204,6 +217,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     addTask(title);
                   controller.clear();
                   Navigator.pop(context);
+                  ScaffoldMessenger.of(context ).showSnackBar(
+                     const SnackBar(content: Text("Task Added "))
+                  );
                 }, child: const Text("Add"),),
               ],
 
