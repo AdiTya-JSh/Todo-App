@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:todo_app/widgets/empty_state.dart';
 import '/models/task.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../widgets/task_tile.dart';
@@ -35,6 +34,54 @@ class _HomeScreenState extends State<HomeScreen> {
     taskBox.add(Task(title: title));
   }
 
+  void showMessage(String message){
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message),
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12)
+      ),)
+    );
+  }
+
+  void submitTask(String title){
+    title = title.trim();
+    if(title.isEmpty) return;
+    Navigator.pop(context);
+    addTask(title);
+    showMessage("Task Added");
+  }
+
+  void showAddDialog(){
+    controller.clear();
+    showDialog(context: context, builder: (_){
+      return AlertDialog(
+        title: const Text("Add Task"),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: "Enter Task",
+          ),
+          onSubmitted: submitTask
+        ),
+        actions: [
+
+          TextButton(onPressed: (){
+
+            Navigator.pop(context);
+          }, child: const Text("Cancel"),),
+
+          FilledButton(onPressed: () => submitTask(controller.text),
+            child: const Text("Add"),),
+        ],
+
+      );
+
+    },
+    );
+  }
 
   void showTaskOptions(Task task , int index){
     showModalBottomSheet(context: context, builder: (context){
@@ -104,15 +151,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 completed: task.completed,
               ),);
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Task Updated"))
-            );
+            showMessage("Task Updated");
           }, child: const Text("Save"))
         ],
       );
 
     },
-    );
+    ).then((_){
+      controller.dispose();
+    });
   }
 
 
@@ -147,13 +194,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
                 final messenger = ScaffoldMessenger.of(context);
                 messenger.hideCurrentSnackBar();
-                messenger.showSnackBar(
-                    SnackBar(content: const Text("Task Deleted"),
+                final showSnack = messenger.showSnackBar(
+                    SnackBar(
+                      content: const Text("Task Deleted"),
+                      behavior: SnackBarBehavior.floating,
+                      margin: const EdgeInsets.all(12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     action: SnackBarAction(
+
                         label: "UNDO", onPressed: (){
                       taskBox.add(deletedTask);
-                    }),)
+                     }),
+      )
                 );
+                Future.delayed(const Duration(seconds: 4),(){
+                  showSnack.close();
+                });
               }, child: const Text("Delete"))
         ],);
     });
@@ -165,8 +223,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
-        title: const Text("Todo App"),
-      ),
+        title: const Text("My Tasks"),
+        bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(24),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ValueListenableBuilder(
+                  valueListenable: taskBox.listenable(),
+                  builder: (context,box,child){
+                    final tasks = box.values.toList();
+
+                    return Text("${tasks.length} ${tasks.length==1?"Task" : "Tasks"}");}),
+                  )
+      ),),
       body: ValueListenableBuilder(
         valueListenable: taskBox.listenable(),
         builder: (context, box, child){
@@ -192,43 +261,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
           );
       });}),
-        
-        floatingActionButton: FloatingActionButton(
-        onPressed: (){
-          showDialog(context: context, builder: (context){
-            return AlertDialog(
-              title: const Text("Add Task"),
-                content: TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    hintText: "Enter Task",
-                  ),
-                ),
-              actions: [
 
-                TextButton(onPressed: (){
-                  controller.clear();
-                  Navigator.pop(context);
-                }, child: const Text("Cancel"),),
-
-                TextButton(onPressed: (){
-                  final title = controller.text.trim();
-                  if(title.isEmpty) return;
-                    addTask(title);
-                  controller.clear();
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context ).showSnackBar(
-                     const SnackBar(content: Text("Task Added "))
-                  );
-                }, child: const Text("Add"),),
-              ],
-
-            );
-
-          },
-          );
-        },
-          child: const Icon(Icons.add),
+        floatingActionButton: FloatingActionButton.extended(
+        onPressed: showAddDialog,
+          icon: const Icon(Icons.add),
+          label: const Text("Add Task"),
     ),
     );
   }

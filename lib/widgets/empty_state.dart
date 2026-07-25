@@ -9,9 +9,9 @@ class EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.note_alt_outlined,
-            size: 80,
-            color: Colors.grey,),
+          Icon(Icons.task_alt_outlined,
+            size: 90,
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)),
 
           const SizedBox(height: 16,),
 
