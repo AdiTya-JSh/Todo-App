@@ -14,12 +14,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController controller = TextEditingController();
   late Box<Task> taskBox;
+  List<Task> tasks = [];
 
   @override
   void initState(){
     super.initState();
 
     taskBox = Hive.box<Task>("tasks");
+    tasks = taskBox.values.toList();
   }
 
 
@@ -31,7 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
   void addTask(String title){
-    taskBox.add(Task(title: title));
+    final task = Task(title: title);
+
+    tasks.add(task);
+    taskBox.add(task);
+
+    setState(() {});
   }
 
   void showMessage(String message){
@@ -145,11 +152,14 @@ class _HomeScreenState extends State<HomeScreen> {
             final title = controller.text.trim();
 
             if(title.isEmpty)return;
-            taskBox.putAt(index,
-              Task(
-                title : title,
-                completed: task.completed,
-              ),);
+            final updatedTask = Task(
+              title : title,
+              completed: task.completed,);
+
+            tasks[index] = updatedTask;
+            taskBox.putAt(index, updatedTask);
+
+            setState(() {});
             Navigator.pop(context);
             showMessage("Task Updated");
           }, child: const Text("Save"))
@@ -157,9 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
     },
-    ).then((_){
-      controller.dispose();
-    });
+    );
   }
 
 
@@ -189,8 +197,9 @@ class _HomeScreenState extends State<HomeScreen> {
           TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red) ,
               onPressed: (){
-                final deletedTask = task;
+                final deletedTask = tasks.removeAt(index);
                 taskBox.deleteAt(index);
+                setState(() {});
                 Navigator.pop(context);
                 final messenger = ScaffoldMessenger.of(context);
                 messenger.hideCurrentSnackBar();
@@ -205,7 +214,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     action: SnackBarAction(
 
                         label: "UNDO", onPressed: (){
+                          tasks.add(deletedTask);
                       taskBox.add(deletedTask);
+                      setState(() {});
                      }),
       )
                 );
@@ -228,20 +239,10 @@ class _HomeScreenState extends State<HomeScreen> {
             preferredSize: const Size.fromHeight(24),
             child: Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: ValueListenableBuilder(
-                  valueListenable: taskBox.listenable(),
-                  builder: (context,box,child){
-                    final tasks = box.values.toList();
-
-                    return Text("${tasks.length} ${tasks.length==1?"Task" : "Tasks"}");}),
+              child: Text("${tasks.length} ${tasks.length==1?"Task" : "Tasks"}"),
                   )
       ),),
-      body: ValueListenableBuilder(
-        valueListenable: taskBox.listenable(),
-        builder: (context, box, child){
-          final tasks = box.values.toList();
-
-      return tasks.isEmpty? const EmptyState() :
+      body: tasks.isEmpty? const EmptyState() :
       ListView.builder(
         itemCount: tasks.length,
       itemBuilder: (context,index){
@@ -249,10 +250,14 @@ class _HomeScreenState extends State<HomeScreen> {
             task: tasks[index],
 
             onToggle: (){
-              taskBox.putAt(index, Task(
+              final updatedTask = Task(
                 title: tasks[index].title,
                 completed: !tasks[index].completed,
-              ));
+              );
+              tasks[index] = updatedTask;
+              taskBox.putAt(index, updatedTask);
+
+              setState(() {});
             },
 
             onLongPress: (){
@@ -260,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
 
           );
-      });}),
+      }),
 
         floatingActionButton: FloatingActionButton.extended(
         onPressed: showAddDialog,
