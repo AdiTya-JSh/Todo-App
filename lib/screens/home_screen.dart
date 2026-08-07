@@ -15,6 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController controller = TextEditingController();
   late Box<Task> taskBox;
   List<Task> tasks = [];
+  final GlobalKey<AnimatedListState> listKey = GlobalKey<AnimatedListState>();
 
   @override
   void initState(){
@@ -22,6 +23,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     taskBox = Hive.box<Task>("tasks");
     tasks = taskBox.values.toList();
+  }
+
+  void debugState(String operation) {
+    debugPrint("----- $operation -----");
+    debugPrint("tasks.length = ${tasks.length}");
+    // debugPrint("taskBox.length = ${taskBox.length}");
+    debugPrint("----------------------");
   }
 
 
@@ -38,6 +46,9 @@ class _HomeScreenState extends State<HomeScreen> {
     tasks.add(task);
     taskBox.add(task);
 
+    listKey.currentState?.insertItem(
+        tasks.length -1
+    );
     setState(() {});
   }
 
@@ -197,14 +208,21 @@ class _HomeScreenState extends State<HomeScreen> {
           TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red) ,
               onPressed: (){
-                final deletedTask = tasks.removeAt(index);
+                final deletedTask = tasks[index];
+                listKey.currentState!.removeItem(index, (context,animation){
+                  return TaskTile(task: deletedTask, onToggle: (){}, onLongPress: (){});
+                });
+                tasks.removeAt(index);
                 taskBox.deleteAt(index);
                 setState(() {});
+
+
                 Navigator.pop(context);
                 final messenger = ScaffoldMessenger.of(context);
                 messenger.hideCurrentSnackBar();
                 final showSnack = messenger.showSnackBar(
                     SnackBar(
+                      duration: const Duration(seconds: 4),
                       content: const Text("Task Deleted"),
                       behavior: SnackBarBehavior.floating,
                       margin: const EdgeInsets.all(12),
@@ -214,15 +232,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     action: SnackBarAction(
 
                         label: "UNDO", onPressed: (){
-                          tasks.add(deletedTask);
-                      taskBox.add(deletedTask);
+                          tasks.insert(index ,deletedTask);
+                      taskBox.putAt(index , deletedTask);
+                      listKey.currentState!.insertItem(index);
                       setState(() {});
                      }),
       )
                 );
-                Future.delayed(const Duration(seconds: 4),(){
-                  showSnack.close();
-                });
+                // Future.delayed(const Duration(seconds: 4),(){
+                //   showSnack.close();
+                // });
               }, child: const Text("Delete"))
         ],);
     });
@@ -243,9 +262,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
       ),),
       body: tasks.isEmpty? const EmptyState() :
-      ListView.builder(
-        itemCount: tasks.length,
-      itemBuilder: (context,index){
+      AnimatedList(
+        key: listKey,
+        initialItemCount: tasks.length,
+      itemBuilder: (context,index,animation){
           return TaskTile(
             task: tasks[index],
 
