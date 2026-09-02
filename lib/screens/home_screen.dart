@@ -23,6 +23,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     taskBox = Hive.box<Task>("tasks");
     tasks = taskBox.values.toList();
+    tasks.sort(
+        (a,b)=> a.order.compareTo(b.order)
+    );
   }
 
   void debugState(String operation) {
@@ -41,7 +44,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
 
   void addTask(String title){
-    final task = Task(title: title);
+    final task = Task(
+        title: title,
+    order: tasks.length);
 
     tasks.add(task);
     taskBox.add(task);
@@ -164,8 +169,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
             if(title.isEmpty)return;
             final updatedTask = Task(
+              id: task.id,
               title : title,
-              completed: task.completed,);
+              completed: task.completed,
+            order: task.order);
 
             tasks[index] = updatedTask;
             taskBox.putAt(index, updatedTask);
@@ -271,8 +278,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
             onToggle: (){
               final updatedTask = Task(
+                id: tasks[index].id,
                 title: tasks[index].title,
                 completed: !tasks[index].completed,
+                order: tasks[index].order
               );
               tasks[index] = updatedTask;
               taskBox.putAt(index, updatedTask);
